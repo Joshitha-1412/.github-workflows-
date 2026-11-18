@@ -1,0 +1,48 @@
+name: Linux User Account Management
+
+# Allows you to run this workflow manually from the Actions tab
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  manage-linux-user:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Create a new user account
+        run: |
+          # -m creates the home directory (/home/devuser)
+          # -s sets the default login shell to bash
+          sudo useradd -m -s /bin/bash devuser
+          echo "User devuser created."
+
+      - name: 2. Configure the user account
+        run: |
+          # Set a password non-interactively
+          echo "devuser:TempPass123!" | sudo chpasswd
+          
+          # Add the user to the 'sudo' group for administrative privileges
+          sudo usermod -aG sudo devuser
+          
+          # Lock down home directory permissions (owner read/write/execute only)
+          sudo chmod 700 /home/devuser
+          
+          # Verify user creation, UID/GID, and group memberships
+          id devuser
+          grep devuser /etc/passwd
+
+      - name: 3. Delete the user account
+        run: |
+          # -r removes the user's home directory and mail spool along with the account
+          sudo userdel -r devuser
+          echo "User devuser deleted."
+          
+          # Verify the user no longer exists (returns exit code 1 if not found, so we catch it)
+          if id "devuser" &>/dev/null; then
+            echo "Error: User still exists"
+            exit 1
+          else
+            echo "Verification passed: devuser completely removed."
+          fi
